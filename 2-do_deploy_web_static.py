@@ -43,9 +43,18 @@ def do_deploy(archive_path):
         run("sudo rm -rf /data/web_static/current")
         run("sudo ln -s /data/web_static/releases/" + f +
             "/ /data/web_static/current")
-        print("New version deployed!")
         return True
     except:
         return False
 
     return True
+
+
+def deploy():
+    """Runs both pack and deploy"""
+    f = do_pack()
+    if f:
+        deploy = do_deploy(f)
+        return deploy
+    else:
+        return False
