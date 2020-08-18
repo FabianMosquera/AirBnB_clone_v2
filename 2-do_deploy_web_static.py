@@ -1,44 +1,51 @@
 #!/usr/bin/python3
-""" Program that distributes an archive to your web servers,
-cusing the function do_deploy """
+"""Fab script"""
+import os
 from datetime import datetime
 from fabric.api import *
-from os import path
 
-env.hosts = ['34.73.23.33', '34.236.145.76']
+env.hosts = ["34.73.23.33", "34.236.145.76"]
+env.user = "ubuntu"
+env.key_filename = "~/.ssh/holberton"
+env.warn_only = True
 
 
 def do_pack():
-    """ Generates a .tgz archive from the contents of the web_static
-    folder of your AirBnB Clone repo """
-    date_str = datetime.now().strftime('%Y%m%d%H%M%S')
-    local("mkdir -p versions/")
-    try:
-        local("tar -cvzf versions/web_static_{}.tgz web_static"
-              .format(date_str))
-        return "versions/web_static_{}.tgz".format(date_str)
-    except Exception:
+    """Packs web_static into tgz"""
+    current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+    file_path = "versions/web_static_" + current_time + ".tgz"
+    local("mkdir -p versions")
+    local("tar -cvzf " + file_path + " web_static")
+    if os.path.exists(file_path):
+        return file_path
+    else:
         return None
 
 
 def do_deploy(archive_path):
-    """ Distributes an archive to the web servers """
-    if not path.exists(archive_path):
+    """Deploys archive to web servers"""
+    if not os.path.exists(archive_path) and not os.path.isfile(archive_path):
         return False
-    # split the path and get the second element in the list
-    file_path = archive_path.split("/")[1]
-    serv_folder = "/data/web_static/releases/" + file_path
+
+    temp = archive_path.split('/')
+    temp0 = temp[1].split(".")
+    f = temp0[0]
 
     try:
-        put(archive_path, "/tmp/")
-        run("sudo mkdir -p " + serv_folder)
-        run("sudo tar -xzf /tmp/" + file_path + " -C " + serv_folder + "/")
-        run("sudo rm /tmp/" + file_path)
-        run("sudo mv " + serv_folder + "/web_static/* " + serv_folder)
-        run("sudo rm -rf " + serv_folder + "/web_static")
+        put(archive_path, '/tmp')
+        run("sudo mkdir -p /data/web_static/releases/" + f + "/")
+        run("sudo tar -xzf /tmp/" + f + ".tgz" +
+            " -C /data/web_static/releases/" + f + "/")
+        run("sudo rm /tmp/" + f + ".tgz")
+        run("sudo mv /data/web_static/releases/" + f +
+            "/web_static/* /data/web_static/releases/" + f + "/")
+        run("sudo rm -rf /data/web_static/releases/" + f + "/web_static")
         run("sudo rm -rf /data/web_static/current")
-        run("sudo ln -s " + serv_folder + " /data/web_static/current")
+        run("sudo ln -s /data/web_static/releases/" + f +
+            "/ /data/web_static/current")
         print("New version deployed!")
         return True
-    except Exception:
+    except:
         return False
+
+    return True
